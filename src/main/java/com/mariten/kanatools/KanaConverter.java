@@ -2,38 +2,127 @@ package com.mariten.kanatools;
 import com.mariten.kanatools.KanaAppraiser;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
-  * Provides easy, automatic string conversions often necessary when dealing with Japanese text
+  * Easy back-and-forth conversion of kana, hankaku, zenkaku, and other characters used in Japanese text.
   *
-  * Port of PHP's "mb_convert_kana" function for Java.
-  * http://www.php.net/manual/en/function.mb-convert-kana.php
+  * <p><b>For example code, see the <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/">class details page</a></b></p>
+  *
+  * <p>Perform multiple conversions on Kana and Roma-ji text with just a single static function call</p>
+  * <ul>
+  *   <li>Specify one or more conversion operations using flag-style integer constants representing each available type of convesion</li>
+  *   <li>Call the <code>convertKana</code> function once on an input string it will quickly handle each conversion in a single run</li>
+  *   <li>Designed with speed in mind</li>
+  *   <li>Optionally able to specify characters to be excluded from conversion</li>
+  *   <li>Uses UTF-8</li>
+  *   <li>Inspired by <a target="_blank" href="http://php.net/manual/en/function.mb-convert-kana.php">mb_convert_kana</a>, a native PHP function that similarly handles multi-method Japanese text conversions.</li>
+  * </ul>
+  *
+  * @author Jeff Case (mariten)
   */
 public class KanaConverter
 {
     // Conversion Operations Types
     //// Matched numeric values to originals in PHP's source code
     //// https://github.com/php/php-src/blob/a84e5dc37dc0ff8c313164d9db141d3d9f2b2730/ext/mbstring/mbstring.c#L3434
+
+    /**
+      * <b>Conversion Op Flag</b>: Standard-width (<i>hankaku</i>) ASCII to double-width (<i>zenkaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_HAN_ASCII_TO_ZEN_ASCII      = 0x00000001;
+
+    /**
+      * <b>Conversion Op Flag</b>: Standard-width (<i>hankaku</i>) alphabetic letters to double-width (<i>zenkaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_HAN_LETTER_TO_ZEN_LETTER    = 0x00000002;
+
+    /**
+      * <b>Conversion Op Flag</b>: Standard-width (<i>hankaku</i>) numbers to double-width (<i>zenkaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_HAN_NUMBER_TO_ZEN_NUMBER    = 0x00000004;
+
+    /**
+      * <b>Conversion Op Flag</b>: Standard-width (<i>hankaku</i>) spaces to double-width (<i>zenkaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_HAN_SPACE_TO_ZEN_SPACE      = 0x00000008;
+
+    /**
+      * <b>Conversion Op Flag</b>: Half-width (<i>hankaku</i>) katakana to full-width (<i>zenkaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_HAN_KATA_TO_ZEN_KATA        = 0x00000100;
+
+    /**
+      * <b>Conversion Op Flag</b>: Half-width (<i>hankaku</i>) katakana to full-width (<i>zenkaku</i>) hiragana.
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_HAN_KATA_TO_ZEN_HIRA        = 0x00000200;
+
+    /**
+      * <b>Conversion Op Flag</b>: Keep <i>hankaku</i> katakana diacritic marks separate.
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_KEEP_DIACRITIC_MARKS_APART  = 0x00100000;
+
+    /**
+      * <b>Conversion Op Flag</b>: Double-width (<i>zenkaku</i>) ASCII characters to standard-width (<i>hankaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_ASCII_TO_HAN_ASCII      = 0x00000010;
+
+    /**
+      * <b>Conversion Op Flag</b>: Double-width (<i>zenkaku</i>) alphabetic letters to standard-width (<i>hankaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_LETTER_TO_HAN_LETTER    = 0x00000020;
+
+    /**
+      * <b>Conversion Op Flag</b>: Double-width (<i>zenkaku</i>) numbers to standard-width (<i>hankaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_NUMBER_TO_HAN_NUMBER    = 0x00000040;
+
+    /**
+      * <b>Conversion Op Flag</b>: Double-width (<i>zenkaku</i>) spaces to standard-width (<i>hankaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_SPACE_TO_HAN_SPACE      = 0x00000080;
+
+    /**
+      * <b>Conversion Op Flag</b>: Full-width (<i>zenkaku</i>) katakana to half-width (<i>hankaku</i>).
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_KATA_TO_HAN_KATA        = 0x00001000;
+
+    /**
+      * <b>Conversion Op Flag</b>: Full-width (<i>zenkaku</i>) hirgana to half-width (<i>hankaku</i>) katakana.
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_HIRA_TO_HAN_KATA        = 0x00002000;
+
+    /**
+      * <b>Conversion Op Flag</b>: Full-width (<i>zenkaku</i>) hiragana to full-width (<i>hankaku</i>) katakana.
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_HIRA_TO_ZEN_KATA        = 0x00010000;
+
+    /**
+      * <b>Conversion Op Flag</b>: Full-width (<i>zenkaku</i>) katakana to full-width (<i>zenkaku</i>) hiragana.
+      * See <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">Conversion Op Guide</a> for full details.
+      */
     public static final int OP_ZEN_KATA_TO_ZEN_HIRA        = 0x00020000;
+
 
     //// Maintain backwards compatibility (based on mb_convert_kana's "$option" parameter from PHP)
     //// Details: http://php.net/manual/en/function.mb-convert-kana.php
-    public static final Map<Character, Integer> LETTER_OP_CODE_LOOKUP;
+    protected static final Map<Character, Integer> LETTER_OP_CODE_LOOKUP;
     static {
         LETTER_OP_CODE_LOOKUP = new HashMap<Character, Integer>();
         LETTER_OP_CODE_LOOKUP.put('A', OP_HAN_ASCII_TO_ZEN_ASCII);
@@ -55,13 +144,16 @@ public class KanaConverter
 
     //{{{ String convertKana(String, int, String)
     /**
-      * Converts a string containing kana or other characters used in Japanese text input
-      * according to one or more requested conversion methods.
+      * Converts a string containing kana or other characters used in Japanese text input according to
+      * one or more requested conversion methods, and permits exclusion of certain characters.
       *
-      * @param  original_string  Input string to perform conversion on
-      * @param  conversion_ops   Flag-based integer indicating which type of conversions to perform
-      * @param  chars_to_ignore  Each character in this string will be excluded from conversion
-      * @return Content of "original_string" with specified conversions performed
+      * @since                      1.1.0
+      * @param  original_string     UTF-8 string to convert
+      * @param  conversion_ops      Flag-based integer indicating which type of conversion operations to perform
+      *                             by setting one or more "KanaConverter.OP_" constants; details on this parameter
+      *                             can be found <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">here</a>
+      * @param  chars_to_ignore     No characters in this string will be converted even if present in "original_string"
+      * @return                     UTF-8 string with all requested conversions applied
       */
     public static String convertKana(String original_string, int conversion_ops, String chars_to_ignore)
     {
@@ -82,6 +174,10 @@ public class KanaConverter
             do_collapse_on_hankaku_diacritic = false;
         }
 
+        // Prepare excluded characters lookup
+        Set<Character> ignore_char_lookup = makeIgnoreCharLookup(chars_to_ignore);
+
+        // Init data holders
         int char_count = original_string.length();
         StringBuffer new_string = new StringBuffer();
         int i = 0;
@@ -96,8 +192,7 @@ public class KanaConverter
             }
 
             // Skip all conversions if character is on the excluded chars list
-            boolean is_ignore_char = isIgnoreChar(current_char, chars_to_ignore);
-            if(is_ignore_char) {
+            if(ignore_char_lookup.contains(current_char)) {
                 new_string.append(current_char);
                 i++;
                 continue;
@@ -227,12 +322,15 @@ public class KanaConverter
     //}}}
     //{{{ String convertKana(String, int)
     /**
-      * Converts a string containing kana or other characters used in Japanese text input
-      * according to one or more requested conversion methods.
+      * Converts a string containing kana or other characters used in Japanese text input according to
+      * one or more requested conversion methods.
       *
-      * @param  original_string  Input string to perform conversion on
-      * @param  conversion_ops   Flag-based integer indicating which type of conversions to perform
-      * @return Content of "original_string" with specified conversions performed
+      * @since                      1.0.0
+      * @param  original_string     UTF-8 string to convert
+      * @param  conversion_ops      Flag-based integer indicating which type of conversion operations to perform
+      *                             by setting one or more "KanaConverter.OP_" constants; details on this parameter
+      *                             can be found <a target="_blank" href="http://mariten.github.io/kanatools-java/kana-converter/#conversion-list">here</a>
+      * @return                     UTF-8 string with all requested conversions applied
       */
     public static String convertKana(String original_string, int conversion_ops)
     {
@@ -241,13 +339,15 @@ public class KanaConverter
     //}}}
     //{{{ String convertKana(String, String, String)
     /**
-      * Converts a string containing kana or other characters used in Japanese text input
-      * according to one or more requested conversion methods.
+      * Converts a string containing kana or other characters used in Japanese text input according to
+      * one or more requested conversion methods, and permits exclusion of certain characters.
       *
-      * @param  original_string         Input string to perform conversion on
+      * @deprecated
+      * @see                            #convertKana(String,int,String)
+      * @param  original_string         UTF-8 string to convert
       * @param  conversion_ops_string   PHP mb_convert_kana style string specifying desired conversions
-      * @param  chars_to_ignore         Each character in this string will be excluded from conversion
-      * @return Content of "original_string" with specified conversions performed
+      * @param  chars_to_ignore         No characters in this string will be converted even if present in "original_string"
+      * @return                         UTF-8 string with all requested conversions applied
       */
     public static String convertKana(String original_string, String conversion_ops_string, String chars_to_ignore)
     {
@@ -257,12 +357,14 @@ public class KanaConverter
     //}}}
     //{{{ String convertKana(String, String)
     /**
-      * Converts a string containing kana or other characters used in Japanese text input
-      * according to one or more requested conversion methods.
+      * Converts a string containing kana or other characters used in Japanese text input according to
+      * one or more requested conversion methods.
       *
-      * @param  original_string         Input string to perform conversion on
+      * @deprecated
+      * @see                            #convertKana(String,int)
+      * @param  original_string         UTF-8 string to convert
       * @param  conversion_ops_string   PHP mb_convert_kana style string specifying desired conversions
-      * @return Content of "original_string" with specified conversions performed
+      * @return                         UTF-8 string with all requested conversions applied
       */
     public static String convertKana(String original_string, String conversion_ops_string)
     {
@@ -273,8 +375,8 @@ public class KanaConverter
 
     //{{{ Hankaku Katakana related mappings
     // Diacritic constants
-    public static final char HANKAKU_VOICED_MARK    = 'ﾞ';  // dakuten
-    public static final char HANKAKU_ASPIRATED_MARK = 'ﾟ';  // handakuten
+    protected static final char HANKAKU_VOICED_MARK    = 'ﾞ';  // dakuten
+    protected static final char HANKAKU_ASPIRATED_MARK = 'ﾟ';  // handakuten
 
     protected static final Map<Character, Character> MAPPING_HANKAKU_TO_ZENKAKU_KATAKANA_UNVOICED;
     static {
@@ -510,11 +612,11 @@ public class KanaConverter
 
 
     // Connect mapping of hiragana and katakana char codes
-    public static final int OFFSET_ZENKAKU_HIRAGANA_TO_ZENKAKU_KATAKANA =
+    protected static final int OFFSET_ZENKAKU_HIRAGANA_TO_ZENKAKU_KATAKANA =
     (KanaAppraiser.ZENKAKU_KATAKANA_FIRST - KanaAppraiser.ZENKAKU_HIRAGANA_FIRST);
 
     // Connect mapping of regular ASCII characters to Zenkaku ASCII characters
-    public static final int OFFSET_HANKAKU_ASCII_TO_ZENKAKU_ASCII =
+    protected static final int OFFSET_HANKAKU_ASCII_TO_ZENKAKU_ASCII =
     (KanaAppraiser.ZENKAKU_ASCII_FIRST - KanaAppraiser.HANKAKU_ASCII_FIRST);
 
 
@@ -704,19 +806,15 @@ public class KanaConverter
     //}}}
 
 
-    //{{{ boolean isIgnoreChar(char, String)
-    protected static boolean isIgnoreChar(char char_to_check, String chars_to_ignore)
+    //{{{ boolean makeIgnoreCharLookup(String)
+    protected static Set<Character> makeIgnoreCharLookup(String chars_to_ignore)
     {
+        Set<Character> lookup_hash = new HashSet<Character>();
         int ignore_char_count = chars_to_ignore.length();
         for(int i = 0; i < ignore_char_count; i++) {
-            if(char_to_check == chars_to_ignore.charAt(i)) {
-                // Matched
-                return true;
-            }
+            lookup_hash.add(chars_to_ignore.charAt(i));
         }
-
-        // No matches
-        return false;
+        return lookup_hash;
     }
     //}}}
 
